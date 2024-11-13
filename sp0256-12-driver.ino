@@ -1,5 +1,8 @@
+// standalone SP0256 driver, that speaks allophones sent over serial port.
+
 #include "DigitalIO.h"
 
+// pin mapping for speechchips.com test board.
 #define LRQ A0
 #define SA8 A1
 #define SA7 A2
@@ -43,15 +46,21 @@ void setup() {
   pinMode(ALD, OUTPUT);
   pinMode(LRQ, INPUT);
   pinMode(SBY, INPUT);
+  // RESET always high
   digitalWrite(RESET, HIGH);
+  // SE always high
   digitalWrite(SE, HIGH);
+  // TEST always low
   digitalWrite(TEST, LOW);
+  // SBRS always high.
   digitalWrite(SBRS, HIGH);
   Serial.begin(115200);
 }
 
 #define WRITEBIT(a, b, p) p.write(a & 1<<b);
 
+// The SP0256 "test board" has unfortunately unconsolidated wiring so we have to
+// address the address pins individually.
 void write_addr(byte a) {
   WRITEBIT(a, 0, sa1);
   WRITEBIT(a, 1, sa2);
@@ -64,14 +73,19 @@ void write_addr(byte a) {
 }
 
 void speak(byte a) {
+  // wait until LRQ is low.
   while (lrq.read()) {};
+  // write address.
   write_addr(a);
+  // trigger address load
   ald.write(LOW);
   delay(1);
   ald.write(HIGH);
 }
 
 void loop() {
+  // wait for a byte/allophone to write, write it, and echo back once the allophone
+  // has been spoken.
   while (Serial.available()) {
     byte b = Serial.read();
     speak(b);
